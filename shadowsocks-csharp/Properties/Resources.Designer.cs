@@ -19,7 +19,7 @@ namespace Shadowsocks.Properties {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -77,22 +77,23 @@ namespace Shadowsocks.Properties {
         ///
         ///# Menu items
         ///
-        ///Enable System Proxy=システムの代理を有効にする
+        ///System Proxy=システムプロキシ
+        ///Disable=無効
         ///Mode=モード
         ///PAC=PAC
         ///Global=全般
-        ///Servers=サーバ
-        ///Edit Servers...=サーバーを編集する...
+        ///Servers=サーバー
+        ///Edit Servers...=サーバーの編集...
         ///Statistics Config...=統計情報の設定...
         ///Start on Boot=システムと同時に起動
-        ///Forward Proxy...=代理を転送する...
-        ///Allow Clients from LAN=LANからのクライアントを許可する
+        ///Forward Proxy...=フォワードプロキシの設定...
+        ///Allow other Devices to connect=他のデバイスからの接続を許可する
         ///Local PAC=ローカル PAC
         ///Online PAC=オンライン PAC
-        ///Edit Local PAC File...=ローカル PAC ファイルを編集する...
-        ///Update Local PAC from GFWList=GFWList から、ローカル PACを更新する
-        ///Edit User Rule for GFWList...=利用者規則を編集する...
-        ///Secure Local [rest of string was truncated]&quot;;.
+        ///Edit Local PAC File...=ローカル PAC ファイルの編集...
+        ///Update Local PAC from GFWList=GFWList からローカル PAC を更新
+        ///Edit User Rule for GFWList...=ユーザールールの編集...
+        ///Secur [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string ja {
             get {
@@ -111,22 +112,13 @@ namespace Shadowsocks.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] mgwz_dll {
-            get {
-                object obj = ResourceManager.GetObject("mgwz_dll", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to listen-address __PRIVOXY_BIND_IP__:__PRIVOXY_BIND_PORT__
         ///toggle 0
         ///logfile ss_privoxy.log
         ///show-on-task-bar 0
         ///activity-animation 0
         ///forward-socks5 / 127.0.0.1:__SOCKS_PORT__ .
+        ///max-client-connections 2048
         ///hide-console
         ///.
         /// </summary>
@@ -254,7 +246,8 @@ namespace Shadowsocks.Properties {
         ///
         ///# Menu items
         ///
-        ///Enable System Proxy=启用系统代理
+        ///System Proxy=系统代理
+        ///Disable=禁用
         ///Mode=系统代理模式
         ///PAC=PAC 模式
         ///Global=全局模式
@@ -263,14 +256,13 @@ namespace Shadowsocks.Properties {
         ///Statistics Config...=统计配置...
         ///Start on Boot=开机启动
         ///Forward Proxy...=正向代理设置...
-        ///Allow Clients from LAN=允许来自局域网的连接
+        ///Allow other Devices to connect=允许其他设备连入
         ///Local PAC=使用本地 PAC
         ///Online PAC=使用在线 PAC
         ///Edit Local PAC File...=编辑本地 PAC 文件...
         ///Update Local PAC from GFWList=从 GFWList 更新本地 PAC
         ///Edit User Rule for GFWList...=编辑 GFWList 的用户规则...
-        ///Secure Local PAC=保护本地 PAC
-        ///Cop [rest of string was truncated]&quot;;.
+        ///Secure Local PAC=保护本地 [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string zh_CN {
             get {
@@ -285,7 +277,8 @@ namespace Shadowsocks.Properties {
         ///
         ///# Menu items
         ///
-        ///Enable System Proxy=啟用系統代理
+        ///System Proxy=系統代理
+        ///Disable=禁用
         ///Mode=系統代理模式
         ///PAC=PAC 模式
         ///Global=全局模式
@@ -294,13 +287,13 @@ namespace Shadowsocks.Properties {
         ///Statistics Config...=統計設定檔...
         ///Start on Boot=開機啟動
         ///Forward Proxy...=正向 Proxy 設定...
-        ///Allow Clients from LAN=允許來自區域網路的連線
+        ///Allow other Devices to connect=允許其他裝置連入
         ///Local PAC=使用本機 PAC
         ///Online PAC=使用線上 PAC
         ///Edit Local PAC File...=編輯本機 PAC 檔案...
         ///Update Local PAC from GFWList=從 GFWList 更新本機 PAC
         ///Edit User Rule for GFWList...=編輯 GFWList 的使用者規則...
-        ///Secure Local PAC=安全本機 [rest of string was truncated]&quot;;.
+        ///Secure Local  [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string zh_TW {
             get {

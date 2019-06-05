@@ -4,12 +4,19 @@ using System.Collections.Specialized;
 using System.Text;
 using System.Web;
 using Shadowsocks.Controller;
+using System.Text.RegularExpressions;
 
 namespace Shadowsocks.Model
 {
     [Serializable]
     public class Server
     {
+        #region ParseLegacyURL
+        public static readonly Regex
+            UrlFinder = new Regex(@"ss://(?<base64>[A-Za-z0-9+-/=_]+)(?:#(?<tag>\S+))?", RegexOptions.IgnoreCase),
+            DetailsParser = new Regex(@"^((?<method>.+?):(?<password>.*)@(?<hostname>.+?):(?<port>\d+?))$", RegexOptions.IgnoreCase);
+        #endregion ParseLegacyURL
+
         private const int DefaultServerTimeoutSec = 5;
         public const int MaxServerTimeoutSec = 20;
 
@@ -19,6 +26,7 @@ namespace Shadowsocks.Model
         public string method;
         public string plugin;
         public string plugin_opts;
+        public string plugin_args;
         public string remarks;
         public int timeout;
 
@@ -39,23 +47,23 @@ namespace Shadowsocks.Model
             {
                 return I18N.GetString("New server");
             }
-            string serverStr;
-            // CheckHostName() won't do a real DNS lookup
-            var hostType = Uri.CheckHostName(server);
 
-            switch (hostType)
-            {
-                case UriHostNameType.IPv6:
-                    serverStr = $"[{server}]:{server_port}";
-                    break;
-                default:
-                    // IPv4 and domain name
-                    serverStr = $"{server}:{server_port}";
-                    break;
-            }
+            string serverStr = $"{FormatHostName(server)}:{server_port}";
             return remarks.IsNullOrEmpty()
                 ? serverStr
                 : $"{remarks} ({serverStr})";
+        }
+
+        public string FormatHostName(string hostName)
+        {
+            // CheckHostName() won't do a real DNS lookup
+            switch (Uri.CheckHostName(hostName))
+            {
+                case UriHostNameType.IPv6:  // Add square bracket when IPv6 (RFC3986)
+                    return $"[{hostName}]";
+                default:    // IPv4 or domain name
+                    return hostName;
+            }
         }
 
         public Server()
@@ -65,79 +73,115 @@ namespace Shadowsocks.Model
             method = "aes-256-cfb";
             plugin = "";
             plugin_opts = "";
+            plugin_args = "";
             password = "";
             remarks = "";
             timeout = DefaultServerTimeoutSec;
         }
 
+        private static Server ParseLegacyURL(string ssURL)
+        {
+            var match = UrlFinder.Match(ssURL);
+            if (!match.Success)
+                return null;
+
+            Server server = new Server();
+            var base64 = match.Groups["base64"].Value.TrimEnd('/');
+            var tag = match.Groups["tag"].Value;
+            if (!tag.IsNullOrEmpty())
+            {
+                server.remarks = HttpUtility.UrlDecode(tag, Encoding.UTF8);
+            }
+            Match details = null;
+            try
+            {
+                details = DetailsParser.Match(Encoding.UTF8.GetString(Convert.FromBase64String(
+                base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '='))));
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+            if (!details.Success)
+                return null;
+            server.method = details.Groups["method"].Value;
+            server.password = details.Groups["password"].Value;
+            server.server = details.Groups["hostname"].Value;
+            server.server_port = int.Parse(details.Groups["port"].Value);
+            return server;
+        }
+
         public static List<Server> GetServers(string ssURL)
         {
-            int prefixLength = "ss://".Length;
-            var serverUrls = ssURL.Split('\r', '\n');
+            var serverUrls = ssURL.Split('\r', '\n', ' ');
 
             List<Server> servers = new List<Server>();
             foreach (string serverUrl in serverUrls)
             {
                 string _serverUrl = serverUrl.Trim();
-
                 if (!_serverUrl.BeginWith("ss://", StringComparison.InvariantCultureIgnoreCase))
                 {
                     continue;
                 }
 
-                // Decode the Base64 part of Uri
-                int indexOfHashOrSlash = _serverUrl.IndexOfAny(new[] { '@', '/', '#' }, 
-                                                               prefixLength, _serverUrl.Length - prefixLength);
-                string webSafeBase64Str = indexOfHashOrSlash == -1 ?
-                    _serverUrl.Substring(prefixLength) :
-                    _serverUrl.Substring(prefixLength, indexOfHashOrSlash - prefixLength);
-
-                string base64Str = webSafeBase64Str.Replace('-', '+').Replace('_', '/');
-                string base64 = base64Str.PadRight(base64Str.Length + (4 - base64Str.Length % 4) % 4, '=');
-                string decodedBase64 = Encoding.UTF8.GetString(Convert.FromBase64String(base64));
-                string decodedServerUrl = serverUrl.Replace(webSafeBase64Str, decodedBase64);
-
-                Uri parsedUrl;
-                try
+                Server legacyServer = ParseLegacyURL(serverUrl);
+                if (legacyServer != null)   //legacy
                 {
-                    parsedUrl = new Uri(decodedServerUrl);
+                    servers.Add(legacyServer);
                 }
-                catch (UriFormatException)
+                else   //SIP002
                 {
-                    continue;
+                    Uri parsedUrl;
+                    try
+                    {
+                        parsedUrl = new Uri(serverUrl);
+                    }
+                    catch (UriFormatException)
+                    {
+                        continue;
+                    }
+                    Server server = new Server
+                    {
+                        remarks = parsedUrl.GetComponents(UriComponents.Fragment, UriFormat.Unescaped),
+                        server = parsedUrl.IdnHost,
+                        server_port = parsedUrl.Port,
+                    };
+
+                    // parse base64 UserInfo
+                    string rawUserInfo = parsedUrl.GetComponents(UriComponents.UserInfo, UriFormat.Unescaped);
+                    string base64 = rawUserInfo.Replace('-', '+').Replace('_', '/');    // Web-safe base64 to normal base64
+                    string userInfo = "";
+                    try
+                    {
+                        userInfo = Encoding.UTF8.GetString(Convert.FromBase64String(
+                        base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=')));
+                    }
+                    catch (FormatException)
+                    {
+                        continue;
+                    }
+                    string[] userInfoParts = userInfo.Split(new char[] { ':' }, 2);
+                    if (userInfoParts.Length != 2)
+                    {
+                        continue;
+                    }
+                    server.method = userInfoParts[0];
+                    server.password = userInfoParts[1];
+
+                    NameValueCollection queryParameters = HttpUtility.ParseQueryString(parsedUrl.Query);
+                    string[] pluginParts = HttpUtility.UrlDecode(queryParameters["plugin"] ?? "").Split(new[] { ';' }, 2);
+                    if (pluginParts.Length > 0)
+                    {
+                        server.plugin = pluginParts[0] ?? "";
+                    }
+
+                    if (pluginParts.Length > 1)
+                    {
+                        server.plugin_opts = pluginParts[1] ?? "";
+                    }
+
+                    servers.Add(server);
                 }
-
-                Server tmp = new Server
-                {
-                    remarks = parsedUrl.GetComponents(UriComponents.Fragment, UriFormat.Unescaped)
-                };
-
-                string userInfo = parsedUrl.GetComponents(UriComponents.UserInfo, UriFormat.Unescaped);
-                tmp.server = parsedUrl.GetComponents(UriComponents.Host, UriFormat.Unescaped);
-                tmp.server_port = parsedUrl.Port;
-
-                string[] userInfoParts = userInfo.Split(new[] { ':' }, 2);
-                if (userInfoParts.Length != 2)
-                {
-                    continue;
-                }
-
-                tmp.method = userInfoParts[0];
-                tmp.password = userInfoParts[1];
-
-                NameValueCollection queryParameters = HttpUtility.ParseQueryString(parsedUrl.Query);
-                string[] pluginParts = HttpUtility.UrlDecode(queryParameters["plugin"] ?? "").Split(new[] { ';' }, 2);
-                if (pluginParts.Length > 0)
-                {
-                    tmp.plugin = pluginParts[0] ?? "";
-                }
-
-                if (pluginParts.Length > 1)
-                {
-                    tmp.plugin_opts = pluginParts[1] ?? "";
-                }
-
-                servers.Add(tmp);
             }
             return servers;
         }
